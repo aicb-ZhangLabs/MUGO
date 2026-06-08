@@ -1,7 +1,7 @@
 '''
 a: /home/dongbos/Combine_optim_Borzoi_SNP/src/interpretability/fig4_gwas/plot_fig4a_benchmark_tss.py
 b: /home/dongbos/Combine_optim_Borzoi_SNP/src/interpretability/fig4_gwas/plot_fig4b_tell_causal_proxy_SNPs.py
-c: /home/dongbos/Combine_optim_Borzoi_SNP/src/interpretability/fig4_gwas/plot_fig4c_SMG9_hardcoded.py
+c: fixed-window SMG9 causal/proxy visualization
 '''
 import matplotlib.pyplot as plt
 import matplotlib.gridspec as gridspec
@@ -183,7 +183,7 @@ def load_data_b():
     return df_res
 
 def run_inference_c():
-    """Run Borzoi for SMG9 Case with Wide Window"""
+    """Run Borzoi for the SMG9 causal/proxy window"""
     print("   [C] Borzoi Inference (SMG9 Shortened)...")
     CASE = {
         'chrom': 'chr19', 'track_idx': 7531, # Blood RNA track

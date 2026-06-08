@@ -1,5 +1,5 @@
 '''
-used to plot the case study for a specific gene 
+Plot gene-level combinatorial effect visualization.
 python plot_case_study.py --gene CAMKK1 --tissue blood
 '''
 import pandas as pd
@@ -13,7 +13,7 @@ import ast
 # ================= ⚙️ 配置 =================
 BASE_DIR = '/home/dongbos/Combine_optim_Borzoi_SNP'
 INPUT_DIR = f'{BASE_DIR}/results/interaction_scan_multi'
-OUTPUT_DIR = f'{BASE_DIR}/results/interaction_scan_multi/case_studies'
+OUTPUT_DIR = f'{BASE_DIR}/results/interaction_scan_multi/example_visualizations'
 
 # 颜色配置
 COLOR_PALETTE = sns.color_palette("Blues", n_colors=10) # 单个SNP用蓝色系
@@ -22,7 +22,7 @@ COLOR_COMBO_RED = '#e74c3c' # 冗余用红色
 COLOR_COMBO_ADD = '#34495e' # 加性用深蓝
 
 def main():
-    parser = argparse.ArgumentParser(description="Plot Case Study for a specific gene")
+    parser = argparse.ArgumentParser(description="Plot gene-level combinatorial effect visualization")
     parser.add_argument('--gene', type=str, required=True, help="Gene Name (e.g. SPX)")
     parser.add_argument('--tissue', type=str, default='blood', help="Tissue (e.g. blood)")
     parser.add_argument('--n', type=int, default=5, help="Top N used (default 5)")
@@ -130,13 +130,13 @@ def main():
     # 4. 装饰
     plt.xticks(x_pos, ['Naive Linear Sum\n(Expected)', 'MVP Model Prediction\n(Actual)'], fontsize=11, fontweight='bold')
     plt.ylabel('Predicted Expression Gain', fontsize=12)
-    plt.title(f"Combinatorial Logic Case Study: {args.gene}", fontsize=14, pad=20, fontweight='bold')
+    plt.title(f"Combinatorial Logic: {args.gene}", fontsize=14, pad=20, fontweight='bold')
     
     # 动态调整 Y 轴上限，留出标题空间
     plt.ylim(0, max_height * 1.2)
     
     # 5. 保存
-    out_file = f"{OUTPUT_DIR}/{tissue}_{args.gene}_case_study.png"
+    out_file = f"{OUTPUT_DIR}/{tissue}_{args.gene}_interaction_visualization.png"
     plt.tight_layout()
     plt.savefig(out_file, dpi=300)
     print(f"✅ Plot saved to: {out_file}")

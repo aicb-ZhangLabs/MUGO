@@ -1,5 +1,5 @@
 '''
-do fig 5 for the paper, is 1*4 figure, and include top/mid/bottome group genes for stats of combinatorial effect and case study for each group. 
+Generate a 1x4 interaction-analysis figure with distribution summaries and example gene-level curves for each group.
 '''
 import pandas as pd
 import numpy as np
@@ -179,7 +179,7 @@ def main():
         ('Bottom 100\n(Redundancy)', bot_100)
     ]
     
-    # 5. Select Representative Genes
+    # 5. Select deterministic example genes from each group
     rep_genes = []
     if not top_100.empty: rep_genes.append(top_100.iloc[0]) 
     if not mid_100.empty: rep_genes.append(mid_100.iloc[len(mid_100)//2]) 
@@ -219,8 +219,8 @@ def main():
         # Rotate x labels slightly if needed
         ax_dist.tick_params(axis='x', labelsize=9)
 
-    # --- Plot 2, 3, 4: Case Studies (Line Charts) ---
-    print("🚀 Loading Borzoi Model for Case Studies...")
+    # --- Plot 2, 3, 4: Example gene-level curves ---
+    print("🚀 Loading Borzoi Model for example gene-level curves...")
     try:
         model = Borzoi.from_pretrained('johahi/borzoi-replicate-0').to(DEVICE).eval()
     except Exception as e:

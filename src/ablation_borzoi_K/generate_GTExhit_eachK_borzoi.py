@@ -91,7 +91,7 @@ def load_gtex_dict(tissue, target_gene_ids):
 
 def get_best_epoch_valid_snps(log_path, k):
     """
-    1. Find Best Epoch (Max Gain)
+    1. Find the max-gain epoch
     2. Filter Score > 0.5
     3. Return deduplicated set
     """

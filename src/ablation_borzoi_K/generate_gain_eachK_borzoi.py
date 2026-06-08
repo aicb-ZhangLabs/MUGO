@@ -83,7 +83,7 @@ def process_single_k(k_val):
 
             gene_name = os.path.basename(filename).split('_optim_log')[0]
             
-            # ✅ 取 Best Epoch
+            # 取 max-gain epoch
             best_idx = df['Gain'].idxmax()
             row_best = df.iloc[best_idx]
             

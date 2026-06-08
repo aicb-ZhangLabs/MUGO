@@ -97,7 +97,7 @@ def find_best_subset(df, modality, tissue):
                         best_record = record
                         best_score = ratio
             
-            # 情况 2: 当前输了，之前也输了 -> 选输得最少的 (Ratio 最大)
+            # 情况 2: 当前和已有记录均未超过 baseline -> 保留 Ratio 较高的记录
             elif best_score <= 1.0:
                 if ratio > best_score:
                     best_record = record
@@ -106,8 +106,8 @@ def find_best_subset(df, modality, tissue):
             # 情况 3: 当前输了，之前赢了 -> 不换，保留赢的
     
     if best_record:
-        status = "👑 WIN" if best_record['MUGO_Mean'] > best_record['Sal_Mean'] else "🥈 Best Effort"
-        print(f"   ✅ Best > {best_record['Threshold']} (N={best_record['N']}) | MUGO: {best_record['MUGO_Mean']:.2f} vs Sal: {best_record['Sal_Mean']:.2f} [{status}]")
+        status = "MUGO>Sal" if best_record['MUGO_Mean'] > best_record['Sal_Mean'] else "MUGO<=Sal"
+        print(f"   ✅ Threshold > {best_record['Threshold']} (N={best_record['N']}) | MUGO: {best_record['MUGO_Mean']:.2f} vs Sal: {best_record['Sal_Mean']:.2f} [{status}]")
         return best_record
     else:
         print(f"   ⚠️ No valid subset found (N < {MIN_N}).")

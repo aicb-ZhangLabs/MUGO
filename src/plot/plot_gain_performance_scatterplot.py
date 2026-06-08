@@ -5,7 +5,7 @@ import seaborn as sns
 import glob
 import os
 import argparse
-from tqdm import tqdm  # ✅ [新增] 引入进度条库
+from tqdm import tqdm
 
 # ================= ⚙️ 命令行参数配置 =================
 def parse_args():
@@ -19,7 +19,7 @@ def parse_args():
 
 def collect_data(input_dir):
     """
-    读取数据，专门提取 Best Epoch (Max Gain) 的数据
+    读取数据，提取 max-gain epoch 的数据
     """
     print(f"📂 [1/2] Reading from: {input_dir}")
     
@@ -32,7 +32,7 @@ def collect_data(input_dir):
     
     print(f"   Found {len(csv_files)} files.")
 
-    # ✅ [修改] 使用 tqdm 包裹循环，显示进度条
+    # 使用 tqdm 包裹循环，显示进度条
     for filename in tqdm(csv_files, desc="Processing CSVs", unit="gene"):
         try:
             df = pd.read_csv(filename)
@@ -41,20 +41,19 @@ def collect_data(input_dir):
 
             gene_name = os.path.basename(filename).split('_optim_log')[0]
             
-            # ✅ [核心修改]：找到 Gain 最大的那一行 (Best Epoch)
+            # 找到 Gain 最大的那一行
             best_idx = df['Gain'].idxmax()
             row_best = df.iloc[best_idx]
             
-            # 使用 Best Epoch 的数据
+            # 使用 max-gain epoch 的数据
             baseline = row_best['Baseline']
-            best_gain = row_best['Gain'] # 这是历史最高 Gain
+            best_gain = row_best['Gain']
             
             # 计算百分比提升
             safe_base = max(float(baseline), 0.1)
             pct_gain = (best_gain / safe_base) * 100
             
-            # ✅ [核心修改]：提取 Best Epoch 那一刻的 Rank 1-8 投票分
-            # 这样反映的是达到最优解时的 SNP 权重分布
+            # 提取 max-gain epoch 的 Rank 1-8 投票分
             vote_dict = {}
             for i in range(1, 9): 
                 vote_dict[f'Rank{i}_Vote'] = row_best.get(f'Rank{i}_Score', 0)
@@ -62,8 +61,8 @@ def collect_data(input_dir):
             entry = {
                 'Gene': gene_name,
                 'Baseline': baseline,
-                'Final_Gain': best_gain, # 为了兼容绘图代码，命名保持 Final_Gain，但实际存的是 Best
-                'Max_Gain': best_gain,   # Best 和 Max 现在是一样的
+                'Final_Gain': best_gain,
+                'Max_Gain': best_gain,
                 'Pct_Gain': pct_gain,
             }
             entry.update(vote_dict)
@@ -98,7 +97,7 @@ def plot_charts_final(df, output_dir, tissue_name):
     )
     plt.xscale('log')
     plt.axhline(0, color='grey', linestyle='--', alpha=0.5)
-    plt.title(f'[{tissue_name}] Relative Impact: % Gain vs. Baseline (Best Epoch)', fontsize=14, fontweight='bold')
+    plt.title(f'[{tissue_name}] Relative Impact: % Gain vs. Baseline (Max-Gain Epoch)', fontsize=14, fontweight='bold')
     plt.xlabel('Baseline Expression (Log Scale)')
     plt.ylabel('Percentage Increase (%)')
     
@@ -120,7 +119,7 @@ def plot_charts_final(df, output_dir, tissue_name):
     # 根据数据动态调整 X 轴范围，防止过于空旷
     max_pct = df['Pct_Gain'].max() if not df['Pct_Gain'].empty else 100
     plt.xlim(-5, max_pct * 1.1) 
-    plt.title(f'[{tissue_name}] Distribution of Best Gains', fontsize=14, fontweight='bold')
+    plt.title(f'[{tissue_name}] Distribution of Max Gains', fontsize=14, fontweight='bold')
     plt.xlabel('Percentage Increase (%)') 
     plt.ylabel('Density')
     plt.tight_layout()
@@ -142,7 +141,7 @@ def plot_charts_final(df, output_dir, tissue_name):
         
         sns.boxplot(x='Votes', y='Rank', data=vote_df, palette="Blues_r", width=0.7, orient='h', fliersize=1.5)
         
-        plt.title(f'[{tissue_name}] Consensus (Best Epoch)', fontsize=10, fontweight='bold', pad=4)
+        plt.title(f'[{tissue_name}] Consensus (Max-Gain Epoch)', fontsize=10, fontweight='bold', pad=4)
         plt.xlabel('Votes', fontsize=8)
         plt.ylabel('') 
         plt.xticks(fontsize=7)
@@ -156,8 +155,7 @@ def plot_charts_final(df, output_dir, tissue_name):
     # =======================================================
     # 🌟 图 3b: Optimization Stability (Top 10 Only)
     # =======================================================
-    # 注意：因为现在只取了 Best Epoch，Final_Gain 和 Max_Gain 是一样的
-    # 所以这个图变成了展示 Top 10 Genes 的 Best Gain 的棒棒糖图 (Lollipop Chart)
+    # 使用 max-gain values 绘制 Top 10 lollipop chart
     plt.figure(figsize=(3.5, 3.0))
     
     if not df.empty:
@@ -166,7 +164,7 @@ def plot_charts_final(df, output_dir, tissue_name):
         plt.hlines(y=top_10['Gene'], xmin=0, xmax=top_10['Final_Gain'], color='grey', alpha=0.5, linewidth=1.2)
         plt.scatter(top_10['Final_Gain'], top_10['Gene'], color='red', s=40, alpha=1.0, zorder=5)
         
-        plt.title(f'[{tissue_name}] Top 10 Best Gains', fontsize=10, fontweight='bold', pad=4)
+        plt.title(f'[{tissue_name}] Top 10 Max Gains', fontsize=10, fontweight='bold', pad=4)
         plt.xlabel('Expression Gain', fontsize=8)
         plt.ylabel('') 
         

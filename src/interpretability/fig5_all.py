@@ -1,7 +1,7 @@
 '''
 单栏2图
 a: only keep top 100.  
-b: case of top 100. 
+b: example visualization from the analyzed interaction set.
 /home/dongbos/Combine_optim_Borzoi_SNP/src/interpretability/combinatory_effect/find_top_N_SNP_combine_effect_violin_plot.py for all plot. 
 '''
 import matplotlib.pyplot as plt
@@ -200,8 +200,8 @@ def main():
     plot_df = pd.concat([top_100, rest])
     plot_df['Ratio'] = plot_df['Ratio'].clip(0.5, 2.5)
 
-    # 3. Case Study Selection
-    print("   [2/3] Processing Case Study...")
+    # 3. Example visualization data
+    print("   [2/3] Processing example visualization...")
     
     meta = {}
     if USE_GPU:

@@ -169,11 +169,11 @@ def construct_mutant_tensor(genome, chrom, start, end, snps):
     return tensor
 
 def get_expecto_snps(path, n):
-    """Parses both MUGO and Saliency output files (single best row format)"""
+    """Parses both MUGO and Saliency output files."""
     if not os.path.exists(path): return []
     df = pd.read_csv(path)
     
-    # MUGO saves history, Saliency saves 1 row. Get the best row.
+    # MUGO saves history, Saliency saves one row; use the max-gain row when available.
     if 'Gain' in df.columns and len(df) > 1:
         best_row = df.loc[df['Gain'].idxmax()]
     else:

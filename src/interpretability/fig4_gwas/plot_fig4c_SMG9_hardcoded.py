@@ -204,7 +204,7 @@ def plot_final_fig4c(gene_name, tissue, chrom,
 # ================= 主程序 =================
 
 def main():
-    print("🚀 Generating Hardcoded SMG9 Figure...")
+    print("🚀 Generating SMG9 fixed-window figure...")
     
     info = TARGET_CASE
     exons, strand, tss = get_smg9_model() 

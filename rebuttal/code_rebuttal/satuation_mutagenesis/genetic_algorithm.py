@@ -208,13 +208,13 @@ def train(gene_name_arg, k_arg, tissue_arg, track_idx_arg, n_window_arg, pop_siz
                 gain = expr.item() - baseline_expr.item()
                 fitnesses.append(gain)
                 
-            # 追踪全场最佳
+            # 追踪当前最优解
             max_idx = np.argmax(fitnesses)
             if fitnesses[max_idx] > best_gain:
                 best_gain = fitnesses[max_idx]
                 best_individual = population[max_idx].clone()
                 
-            print(f"Generation [{gen+1}/{generations}] | Best Gain: {best_gain:+.4f} | Cur Gen Max: {fitnesses[max_idx]:+.4f}")
+            print(f"Generation [{gen+1}/{generations}] | Incumbent Gain: {best_gain:+.4f} | Cur Gen Max: {fitnesses[max_idx]:+.4f}")
             
             # 步骤 3：选择 (Selection) - 保留 Top 50% 最优个体
             sorted_indices = np.argsort(fitnesses)[::-1]

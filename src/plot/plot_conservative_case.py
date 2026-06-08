@@ -22,7 +22,7 @@ GTF_PATH = f'{DATASET_DIR}/gencode.v41.annotation.gtf.gz'  # 必须要有这个�
 PHYLOP_BW = f'{DATASET_DIR}/PolyP_hg38/hg38.phyloP100way.bw'
 
 # 输出目录
-OUTPUT_PLOT_DIR = f'{RESULTS_BASE_DIR}/res_enrichment_conservative_borzoi/case_studies'
+OUTPUT_PLOT_DIR = f'{RESULTS_BASE_DIR}/res_enrichment_conservative_borzoi/example_visualizations'
 os.makedirs(OUTPUT_PLOT_DIR, exist_ok=True)
 
 # 绘图风格设置
@@ -111,11 +111,11 @@ def get_phylop(chrom, snps, bw_path):
     return snps
 
 # ==========================================
-# 3. 核心绘图逻辑 (The Fancy Part)
+# 3. 核心绘图逻辑
 # ==========================================
 
 def plot_case_study(gene_info, snps, exons, output_path):
-    print(f"🎨 Drawing case study for {gene_info['name']}...")
+    print(f"🎨 Drawing genomic visualization for {gene_info['name']}...")
     
     # 定义绘图窗口 (以 TSS 为中心，或者包含所有 SNP)
     snp_pos = [s['Pos'] for s in snps]
@@ -178,7 +178,7 @@ def plot_case_study(gene_info, snps, exons, output_path):
     
     # 装饰 AX1
     ax1.set_ylabel('Model Importance Score', fontsize=12, fontweight='bold')
-    ax1.set_title(f"Case Study: {gene_info['name']} ({gene_info['chrom']})", fontsize=16, fontweight='bold', pad=15)
+    ax1.set_title(f"Genomic Signal: {gene_info['name']} ({gene_info['chrom']})", fontsize=16, fontweight='bold', pad=15)
     ax1.set_ylim(0, max_score * 1.2)
     ax1.grid(axis='y', linestyle=':', alpha=0.5)
     

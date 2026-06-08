@@ -98,7 +98,7 @@ def get_stats_corrected(modality, tissue):
                         
                         # LaTeX 用数学模式的上标，Markdown 换成 HTML 的 <sup>
                         if stars:
-                            stats['MUGO']['pval_latex'] = f"$^{{{stars}}}}$ ($p={pval_str}$)"
+                            stats['MUGO']['pval_latex'] = f"$^{{{stars}}}$ ($p={pval_str}$)"
                             stats['MUGO']['pval_md'] = f" <sup>{stars}</sup>(p={pval_str})"
                         else:
                             stats['MUGO']['pval_latex'] = f" ($p={pval_str}$)"
@@ -159,7 +159,7 @@ def generate_tables():
             row_latex = [mod_latex, tissue_str]
             row_md = [mod_md, tissue_str]
             
-            # Find best mean for bolding
+            # Find row maximum for bolding
             means = [data.get(m[0], {}).get('mean', -1) for m in METHODS_CONFIG]
             best_mean = max(means) if means else 0
             

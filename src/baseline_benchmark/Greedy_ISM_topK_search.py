@@ -1,5 +1,5 @@
 '''
-1. Greedy ISM (Top-K Single Scan) :  暴力扫描序列里的每一个SNP（比如2000个），计算每个SNP单独突变后的 Borzoi Score 变化。然后简单地把分数最高的 Top K 个挑出来。 additive assumption。 
+1. Greedy ISM (Top-K Single Scan): scan each candidate SNP, estimate its single-mutation Borzoi score change, and select Top K by marginal effect under an additive assumption.
 # 跑第 0 个基因，在 brain 上
 python Greedy_ISM_topK_search.py --index 0 --tissue brain
 '''

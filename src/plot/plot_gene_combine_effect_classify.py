@@ -47,8 +47,7 @@ def main():
     # 排序：先按 Synergistic 降序，再按 Redundant 升序
     plot_data = plot_data.sort_values(['Synergistic', 'Redundant'], ascending=[False, True])
     
-    # 如果基因太多，只画 Top 30 (Synergistic) + Bottom 30 (Redundant) + Middle 20
-    # 这里为了简单，如果超过 60 个基因，就抽样展示，否则 X 轴密密麻麻看不清
+    # 如果基因太多，按排序后的前段、中段和后段抽样展示，避免 X 轴过密
     if len(plot_data) > 60:
         subset = pd.concat([plot_data.head(25), plot_data.iloc[len(plot_data)//2-10:len(plot_data)//2+10], plot_data.tail(25)])
     else:
@@ -75,18 +74,18 @@ def main():
     # Part 2: Single Gene Heatmap (微观机制)
     # ---------------------------------------------------------
     
-    # 寻找“最有趣”的基因：Synergistic 和 Redundant 都有的基因 (Mixed Mode)
+    # 选择同时包含 Synergistic 和 Redundant pair 的基因用于热图
     mixed_genes = gene_stats[
         (gene_stats['Synergistic'] > 0) & 
         (gene_stats['Redundant'] > 0)
     ]
     
     if not mixed_genes.empty:
-        # 挑 total pair 最多的那个混合基因
+        # 使用 pair 数最多的混合基因
         target_gene = mixed_genes['Total'].idxmax()
         print(f"\n🔍 Selected mixed gene for heatmap: {target_gene}")
     else:
-        # 如果没有混合的，就挑 Pair 最多的基因
+        # 如果没有混合的，使用 Pair 数最多的基因
         target_gene = gene_stats['Total'].idxmax()
         print(f"\n🔍 No mixed genes found. Using gene with most pairs: {target_gene}")
 

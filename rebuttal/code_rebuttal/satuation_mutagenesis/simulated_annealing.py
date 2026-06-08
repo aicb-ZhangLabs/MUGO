@@ -232,7 +232,7 @@ def train(gene_name_arg, k_arg, tissue_arg, track_idx_arg, n_window_arg, steps, 
         temp *= cooling_rate
         
         if (step + 1) % 10 == 0:
-            print(f"Step [{step+1}/{steps}] | Temp: {temp:.4f} | Best Gain: {best_gain:+.4f} | Cur Gain: {current_gain:+.4f}")
+            print(f"Step [{step+1}/{steps}] | Temp: {temp:.4f} | Incumbent Gain: {best_gain:+.4f} | Cur Gain: {current_gain:+.4f}")
             
         history_log.append({
             "Step": step, "Temp": temp, "Best_Gain": best_gain, "Current_Gain": current_gain

@@ -5,7 +5,7 @@ PYTHON_SCRIPT="/home/dongbos/Combine_optim_Borzoi_SNP/rebuttal/code_rebuttal/sat
 LOG_DIR="/home/dongbos/Combine_optim_Borzoi_SNP/rebuttal/results_rebuttal/satuation_mutagenesis/logs_mugo_crispr"
 mkdir -p "$LOG_DIR"
 
-# 从你刚才的过滤结果中挑选出的 Top 20 基因
+# CRISPR validation gene set from filtered input results
 GENES=("PLP2" "PRDX2" "GATA1" "NFE2" "FTL" "KLF1" "HDAC6" "FUT1" "NUCB1" "PQBP1" "HNRNPA1" "H1FX" "COPZ1" "BAX" "JUNB" "RPN1" "WDR83OS" "RAD23A" "DNASE2" "DHPS")
 
 TISSUE="blood"

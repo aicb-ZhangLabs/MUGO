@@ -58,7 +58,7 @@ def get_candidate_snps(gene_name):
 
 def get_best_epoch_valid_snps(log_path, k):
     """
-    1. Identify Best Epoch (Max Gain)
+    1. Identify the max-gain epoch
     2. Filter SNPs with Score > 0.5
     3. Return deduplicated set of SNPs
     """
@@ -67,7 +67,7 @@ def get_best_epoch_valid_snps(log_path, k):
         df = pd.read_csv(log_path)
         if df.empty: return set()
         
-        # Use Best Epoch
+        # Use the max-gain epoch
         if 'Gain' in df.columns:
             best_idx = df['Gain'].idxmax()
             row = df.iloc[best_idx]

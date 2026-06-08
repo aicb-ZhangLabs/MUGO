@@ -93,8 +93,8 @@ def get_candidate_snps(gene_name):
 
 def get_best_epoch_valid_snps(log_path, k):
     """
-    ✅ [Core Logic]
-    1. Identify Best Epoch (Max Gain)
+    Core logic:
+    1. Identify the max-gain epoch
     2. Filter SNPs with Vote Score > 0.5
     3. Return a unique SET (deduplicated)
     """
@@ -103,7 +103,7 @@ def get_best_epoch_valid_snps(log_path, k):
         df = pd.read_csv(log_path)
         if df.empty: return set()
         
-        # Use Best Epoch
+        # Use the max-gain epoch
         if 'Gain' in df.columns:
             best_idx = df['Gain'].idxmax()
             row = df.iloc[best_idx]

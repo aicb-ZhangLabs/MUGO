@@ -88,7 +88,7 @@ def get_folder_path(modality, tissue):
 #             df = pd.read_csv(f)
 #             if df.empty: continue
             
-#             # 找到 Gain 最大的行 (Optimization Best Step)
+#             # 找到 Gain 最大的行
 #             best_row = df.loc[df['Gain'].idxmax()]
             
 #             baseline = best_row['Baseline']

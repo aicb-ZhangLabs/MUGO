@@ -26,7 +26,7 @@ def load_and_aggregate_stats(base_dir):
     """
     智能读取所有数据：
     1. TSS Rate 必须严格对应 K 值。
-    2. MUGO Rate 取该组织下所有记录中的最大值 (Best Performance)。
+    2. MUGO Rate 取该组织下所有记录中的最大值。
     3. Random Rate 取平均。
     """
     search_path = os.path.join(base_dir, "**", "*summary_stats.csv")
@@ -69,7 +69,7 @@ def load_and_aggregate_stats(base_dir):
             'Enrichment': 1.0
         })
         
-        # 2. 获取 MUGO (取所有文件中的最大值 - "取表现最好的")
+        # 2. 获取 MUGO rate across files
         model_rates = [r['Model_Rate'] for r in rows]
         best_model_rate = max(model_rates) if model_rates else 0
         

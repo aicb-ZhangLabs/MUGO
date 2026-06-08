@@ -115,32 +115,31 @@ def main():
             'dist': dist
         })
 
-    # 4. 排序并展示 (为了方便挑选)
+    # 4. 排序并展示候选位点
     res_df = pd.DataFrame(results)
     if res_df.empty: return
 
-    # 🔥 核心策略：按 ChiSq 排序，打印前 40 个
-    # 你可以从中挑一个 ChiSq 适中 (10-30) 且距离合适 (2kb-20kb) 的
+    # 按 ChiSq 排序，打印前 40 个用于后续人工核查
     top_df = res_df.sort_values('chisq', ascending=False).head(40)
     
-    print("\n✅ Candidate Menu (Pick one for Figure 4C):")
+    print("\n✅ Candidate summary:")
     print(f"{'Index':<5} | {'hg38_Pos':<10} | {'Ref':<3} | {'Alt':<3} | {'ChiSq (Signal)':<14} | {'Dist':<8} | {'Trait'}")
     print("-" * 80)
     
     for idx, r in top_df.iterrows():
-        # 简单标记一下推荐等级
+        # 标记信号强度和距离范围
         rec = ""
         if 10 < r['chisq'] < 40 and 2000 < r['dist'] < 20000:
-            rec = "⭐ Good Visual"
+            rec = "In target range"
         elif r['chisq'] > 100:
-            rec = "⚠️ Too Strong?"
+            rec = "High ChiSq"
             
         print(f"{idx:<5} | {r['hg38_pos']:<10} | {r['ref']:<3} | {r['alt']:<3} | {r['chisq']:<14.1f} | {r['dist']:<8} | {r['trait']} {rec}")
 
-    print("\n💡 Selection Guide:")
-    print("1. Look for '⭐ Good Visual' tags.")
-    print("2. 'ChiSq' around 15-30 creates a nice, visible peak that is clearly smaller than Causal.")
-    print("3. 'Dist' > 2000 ensures it doesn't overlap visually with the Causal star.")
+    print("\nSelection notes:")
+    print("1. Review candidates marked 'In target range'.")
+    print("2. ChiSq around 15-30 indicates a moderate proxy signal.")
+    print("3. Dist > 2000 keeps proxy and causal loci visually separable.")
 
 if __name__ == "__main__":
     main()

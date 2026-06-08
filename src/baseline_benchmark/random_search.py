@@ -1,5 +1,5 @@
 '''
-2. Random Search (Baseline of Baselines)： 从 Candidate Pool 里随机抽取 K 个 SNP，重复 N 次（比如1000次），取分最高的那个组合。（enrichment 1x）  
+2. Random Search: sample K SNPs from the candidate pool for N trials and report the best-scoring sampled combination.
 python run_random_baseline.py --index 0 --tissue brain --k 10 --trials 200
 '''
 

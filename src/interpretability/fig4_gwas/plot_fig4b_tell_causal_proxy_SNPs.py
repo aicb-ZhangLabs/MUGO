@@ -44,7 +44,7 @@ def load_model_top_k(tissue, k=10):
             df = pd.read_csv(f)
             if df.empty: continue
             
-            # Get Best Epoch
+            # Use max-gain epoch
             best_idx = df['Gain'].idxmax()
             row = df.iloc[best_idx]
             

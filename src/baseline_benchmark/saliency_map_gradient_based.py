@@ -1,5 +1,5 @@
 '''
-3. Saliency Map (Gradient-based)： 计算 Output 对 Input 的梯度。直接取梯度绝对值最大的 Top K 个位点。  
+3. Saliency Map (Gradient-based): calculate gradients of the target output with respect to the input and select Top K SNP positions by gradient magnitude.
 python saliency_map_gradient_based.py --index 0 --tissue brain --modality RNA
 '''
 '''

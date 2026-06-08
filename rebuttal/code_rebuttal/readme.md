@@ -21,11 +21,10 @@ raw script to generate benchmark table: /home/dongbos/Combine_optim_Borzoi_SNP/s
 如果你有现成的 Enformer 或者 scGPT 的 wrapper，直接换个 backbone 跑一下你最小的那个 dataset。不用跑全，只要证明“MUGO 框架是 model-agnostic（模型无关）的”即可。
 
 5. benchmark GA, Greedy
-对策： 挑一个搜索空间不那么夸张的 locus（基因座）。自己手写一个极其粗糙的 遗传算法 (GA) 和 贪心搜索 (Greedy)。你的目标不是把 GA 写得多好，而是让 GA 跑得慢且容易陷入局部最优，从而衬托出 MUGO 连续松弛的丝滑与高效。
+补充相同优化目标下的遗传算法 (GA) 和贪心搜索 (Greedy) 对比，用统一的输入、预算和评价指标报告结果。
 
 6. Causal Inference 与 CADD/FunSeq 不公平对比 (R3 W1, W3)
 话术对策： 承认 CADD/FunSeq 和咱们的优化目标不一样（一个是纯打分，一个是组合优化）。但要强调：“在目前的生物信息学界，没有任何一个现成的工具在解决连续组合变异的问题，所以 CADD/FunSeq 是我们能找到的最接近的、被广泛认可的 Baseline。同时为了响应您的要求，我们补充了相同优化目标下的 GA 和 Greedy 算法对比。”
 
 7. mutagenesis/MPRA/CRispy and wetlab validation 
 TODO 
-

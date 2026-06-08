@@ -117,7 +117,7 @@ def parse_log_file(log_file):
     try:
         df = pd.read_csv(log_file)
         if df.empty: return None
-        # 取 Gain 最大的那一步 (Best Epoch)
+        # 取 Gain 最大的那一步
         best_idx = df['Gain'].idxmax(); max_gain = df.loc[best_idx, 'Gain']
         best_row = df.iloc[best_idx]; fname = os.path.basename(log_file)
         gname = fname.split('_')[0]; snps = []
