@@ -1,0 +1,3 @@
+用crispr的dataset吧，这个dataset是ATAC的不太好用。就公开dataset算一下mutagenesis的结果然后MUGO的和MUGO-hybrid的找出的variants 算一个enrichment就得了
+找3个dataset尽量，都算一下enrichment，比如100个gene的。
+然后brain blood两个tissue可以都做一下。

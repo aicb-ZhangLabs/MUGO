@@ -1,0 +1,285 @@
+'''
+is for borzoi ATAC-seq track (TSS promoter optimization).
+'''
+import torch
+import torch.nn as nn
+import torch.nn.functional as F
+import pandas as pd
+import numpy as np
+import pyfaidx
+import os
+import argparse
+from borzoi_pytorch import Borzoi
+
+torch.backends.cudnn.enabled = False 
+
+'''
+V1 ATAC Update: 
+1. Target: ATAC-seq signal maximization around TSS.
+2. Window: TSS - 500bp (Upstream) to TSS + 2000bp (Downstream).
+3. Logic: Considers Strand direction (+/-).
+'''
+
+# ==========================================
+# 0. 核心配置 (在这里修改 ATAC Track ID)
+# ==========================================
+
+# ⚠️⚠️⚠️ 请在这里填入你查到的 Borzoi ATAC/DNAse Track Index ⚠️⚠️⚠️
+# 注意：ATAC 的 ID 和 RNA 以前是不一样的，请务必确认！
+TISSUE_ATAC_MAP = {
+    'blood': 2089,  # ATAC:T lymphocyte 2 (CD4+)
+    'brain': 2033,  # ATAC:Glutamatergic 1
+    'liver': 2035,  # ATAC:Hepatocyte
+    'heart': 2095,  # ATAC:V Cardiomyocyte
+    'muscle': 2093,  # ATAC:Type II Skeletal Myocyte
+    'Pancreas': 2071,  # ATAC:Acinar
+}
+
+# ==========================================
+# 1. Multi-Head Selector (复用原逻辑)
+# ==========================================
+
+class MultiHeadSelector(nn.Module):
+    def __init__(self, num_snps, snp_positions, k=10):
+        super().__init__()
+        self.register_buffer('snp_positions', snp_positions)
+        self.k = k
+        self.logits = nn.Parameter(torch.randn(k, num_snps) * 0.01)
+
+    def forward(self, ref_seq, alt_seq, tau=1.0):
+        gumbels = -torch.empty_like(self.logits).exponential_().log()
+        gumbel_logits = (self.logits + gumbels) / tau
+        soft_masks_k = F.softmax(gumbel_logits, dim=-1)
+        index = soft_masks_k.max(dim=-1, keepdim=True)[1]
+        hard_masks_k = torch.zeros_like(soft_masks_k).scatter_(-1, index, 1.0)
+        masks_k = (hard_masks_k - soft_masks_k).detach() + soft_masks_k
+        combined_mask = masks_k.sum(dim=0)
+        final_mask = torch.clamp(combined_mask, 0.0, 1.0)
+        full_seq_mask = torch.zeros(ref_seq.shape[-1], device=ref_seq.device)
+        full_seq_mask[self.snp_positions] = final_mask
+        full_seq_mask = full_seq_mask.view(1, 1, -1)
+        input_seq = ref_seq * (1 - full_seq_mask) + alt_seq * full_seq_mask
+        return input_seq, final_mask, soft_masks_k
+
+# ==========================================
+# 2. Data Utils (简化版，无需 GTF)
+# ==========================================
+
+SEQ_LEN = 524288 
+
+def seq_to_one_hot(seq_str):
+    mapping = {'A': 0, 'C': 1, 'G': 2, 'T': 3}
+    one_hot = np.zeros((4, len(seq_str)), dtype=np.float32)
+    for i, base in enumerate(seq_str):
+        if base in mapping:
+            one_hot[mapping[base], i] = 1.0
+    return torch.tensor(one_hot)
+
+def prepare_tensors(csv_path, fasta_path, chrom, center_pos, seq_len=SEQ_LEN):
+    # print(f"Loading Genome from {fasta_path}...") 
+    genome = pyfaidx.Fasta(fasta_path)
+    start = center_pos - seq_len // 2
+    end = center_pos + seq_len // 2
+    ref_seq_str = genome[chrom][start:end].seq.upper()
+    if len(ref_seq_str) != seq_len:
+        raise ValueError(f"Sequence length mismatch: {len(ref_seq_str)} vs {seq_len}")
+    ref_tensor = seq_to_one_hot(ref_seq_str).unsqueeze(0) 
+    alt_tensor = ref_tensor.clone()
+    if not os.path.exists(csv_path):
+        raise FileNotFoundError(f"SNP file not found: {csv_path}")
+    df = pd.read_csv(csv_path)
+    df.rename(columns={'POS_hg38': 'pos', 'ALT': 'alt'}, inplace=True)
+    df['pos'] = df['pos'].astype(int)
+    snp_indices_list = []
+    snp_meta_list = [] 
+    mapping = {'A': 0, 'C': 1, 'G': 2, 'T': 3}
+    for idx, row in df.iterrows():
+        abs_pos = int(row['pos'])
+        rel_pos = abs_pos - start
+        if 0 <= rel_pos < seq_len:
+            alt_base = row['alt']
+            ref_base = row['REF'] if 'REF' in row else 'N'
+            if alt_base in mapping:
+                vec = torch.zeros(4)
+                vec[mapping[alt_base]] = 1.0
+                alt_tensor[0, :, rel_pos] = vec
+                snp_indices_list.append(rel_pos)
+                snp_meta_list.append({'abs_pos': abs_pos, 'ref': ref_base, 'alt': alt_base})
+    print(f"Found {len(snp_indices_list)} SNPs in window.")
+    return ref_tensor, alt_tensor, torch.tensor(snp_indices_list).long(), start, snp_meta_list
+
+def get_gene_meta_by_index(target_index, meta_csv_path):
+    print(f"📖 Reading Metadata from: {meta_csv_path}")
+    df = pd.read_csv(meta_csv_path)
+    row = df.iloc[target_index]
+    chrom = f"chr{row['chr']}" 
+    tss = int(row['pos'])
+    return chrom, tss, row['strand'], row['gene_ID'], row['gene_name']
+
+# ==========================================
+# 3. New Loss Function: ATAC TSS Window
+# ==========================================
+
+def calculate_atac_score(model, input_seq, strand, target_track_idx):
+    """
+    计算 TSS 附近的 ATAC 信号总和。
+    窗口: TSS 上游 500bp 到 TSS 下游 2000bp。
+    """
+    # Borzoi 输出 [Batch, Tracks, Length]
+    output = model(input_seq)
+    
+    # ✅ [修复] 正确解包维度 (之前这里写反了)
+    batch_size, n_tracks, n_bins = output.shape
+    
+    # 确定 Center Bin (对应 TSS，因为输入是以 TSS 为中心 Crop 的)
+    center_bin = n_bins // 2
+    
+    # 参数设置
+    bin_size = 32  # Borzoi 分辨率
+    upstream_bp = 500
+    downstream_bp = 2000
+    
+    # 转换为 Bin 数量
+    upstream_bins = upstream_bp // bin_size   # ~15 bins
+    downstream_bins = downstream_bp // bin_size # ~62 bins
+    
+    # 根据 Strand 确定切片范围
+    if strand == '+':
+        start_bin = center_bin - upstream_bins
+        end_bin = center_bin + downstream_bins
+    else: # strand == '-'
+        start_bin = center_bin - downstream_bins
+        end_bin = center_bin + upstream_bins
+        
+    # 边界保护
+    start_bin = max(0, start_bin)
+    end_bin = min(n_bins, end_bin)
+    
+    # ✅ [修复] 正确切片: [Batch, Track, Length]
+    # 之前是 output[:, start:end, track]，这是错的
+    target_signal = output[:, target_track_idx, start_bin:end_bin]
+    
+    # Sum up the signal
+    total_atac = target_signal.sum()
+    
+    return total_atac
+
+# ==========================================
+# 4. Main Routine
+# ==========================================
+
+def train(gene_index_arg, k_arg, tissue_arg, track_idx_arg):
+    DEVICE = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+    LR, STEPS, INIT_TAU, MIN_TAU = 0.05, 200, 5.0, 0.1
+    
+    # 1. 确定 Track Index (使用 ATAC Map)
+    if track_idx_arg is not None:
+        target_idx = track_idx_arg 
+        print(f"🔧 Using Manually Override ATAC Track ID: {target_idx}")
+    elif tissue_arg in TISSUE_ATAC_MAP:
+        target_idx = TISSUE_ATAC_MAP[tissue_arg]
+        print(f"🔍 Auto-detected ATAC Track ID for '{tissue_arg}': {target_idx}")
+    else:
+        raise ValueError(f"Unknown tissue '{tissue_arg}' and no track_idx provided. Please update TISSUE_ATAC_MAP.")
+
+    # 2. 文件夹路径
+    BASE_DIR = '/home/dongbos/Combine_optim_Borzoi_SNP'
+    DATASET_DIR = f'{BASE_DIR}/dataset'
+    
+    # 结果存放在 _ATAC_modeltrain_res 文件夹
+    RESULT_DIR = f'{BASE_DIR}/results/{tissue_arg}_K{k_arg}_borzoi_ATAC_modeltrain_res'
+    os.makedirs(RESULT_DIR, exist_ok=True)
+    
+    print(f"📂 Results will be saved to: {RESULT_DIR}")
+    
+    # 3. 加载数据
+    META_CSV = f'{DATASET_DIR}/gene_3000_borzoi_gencode_v41_hg38.csv'
+    FASTA_PATH = f'{DATASET_DIR}/human_genome_hg38/hg38.ml.fa'
+    
+    chrom, tss, strand, gene_id, gene_name = get_gene_meta_by_index(gene_index_arg, META_CSV)
+    SNP_CSV = f'{DATASET_DIR}/gene_snps_hg38/{gene_name}_snps_hg38.csv'
+    
+    # 4. 准备 Tensor
+    try:
+        ref_seq, alt_seq, snp_positions, seq_start_pos, snp_meta_list = prepare_tensors(
+            SNP_CSV, FASTA_PATH, chrom, center_pos=tss
+        )
+    except FileNotFoundError:
+        print(f"⚠️ SNP file not found for {gene_name}, skipping.")
+        return
+
+    ref_seq = ref_seq.to(DEVICE)
+    alt_seq = alt_seq.to(DEVICE)
+    snp_positions = snp_positions.to(DEVICE)
+    
+    # 5. 模型初始化
+    print("Loading Borzoi...")
+    model_borzoi = Borzoi.from_pretrained('johahi/borzoi-replicate-0').to(DEVICE).eval()
+    for p in model_borzoi.parameters(): p.requires_grad = False
+
+    # Baseline Calculation (ATAC)
+    with torch.no_grad():
+        baseline_atac = calculate_atac_score(model_borzoi, ref_seq, strand, target_idx)
+    print(f"📉 Baseline ATAC ({tissue_arg}): {baseline_atac.item():.4f}")
+    
+    # 6. 优化循环
+    selector = MultiHeadSelector(len(snp_positions), snp_positions, k=k_arg).to(DEVICE)
+    optimizer = torch.optim.Adam(selector.parameters(), lr=LR)
+
+    print(f"🚀 Optimizing {gene_name} ATAC for {tissue_arg}...")
+    history_log = []
+
+    for step in range(STEPS):
+        tau = INIT_TAU * ((MIN_TAU / INIT_TAU) ** (step / STEPS))
+        
+        optimizer.zero_grad()
+        input_seq, final_mask, soft_masks_k = selector(ref_seq, alt_seq, tau=tau)
+        
+        # 计算 ATAC Loss
+        atac_signal = calculate_atac_score(model_borzoi, input_seq, strand, target_idx)
+        loss = -atac_signal # Maximize ATAC
+        
+        loss.backward()
+        optimizer.step()
+        
+        # Logging
+        with torch.no_grad():
+            total_votes = soft_masks_k.sum(dim=0) 
+            top_scores, top_indices = torch.topk(total_votes, k_arg)
+            
+            row_data = {
+                "Step": step, "Loss": loss.item(), "Gain": atac_signal.item() - baseline_atac.item(),
+                "Baseline": baseline_atac.item(), "Tau": tau,
+                "Tissue": tissue_arg, "TrackIdx": target_idx
+            }
+            for i in range(k_arg):
+                idx = top_indices[i].item()
+                snp_info = snp_meta_list[idx]
+                row_data[f"Rank{i+1}_Pos"] = snp_info['abs_pos']
+                row_data[f"Rank{i+1}_RefAlt"] = f"{snp_info['ref']}->{snp_info['alt']}"
+                row_data[f"Rank{i+1}_Score"] = top_scores[i].item()
+            history_log.append(row_data)
+
+        if step % 50 == 0:
+            print(f"Step {step:3d} | ATAC Gain: {atac_signal.item() - baseline_atac.item():+.2f}")
+
+    # 7. 保存结果
+    csv_filename = f"{RESULT_DIR}/{gene_name}_ATAC_optim_log.csv"
+    pd.DataFrame(history_log).to_csv(csv_filename, index=False)
+    print(f"✅ Finished {gene_name}. Saved to {csv_filename}")
+
+if __name__ == "__main__":
+    parser = argparse.ArgumentParser()
+    parser.add_argument('--index', type=int, required=True, help='Row index of the gene')
+    parser.add_argument('--k', type=int, default=10, help='Number of heads')
+    parser.add_argument('--tissue', type=str, default='blood', 
+                        help='Tissue name. Make sure to update TISSUE_ATAC_MAP.')
+    parser.add_argument('--manual_track_id', type=int, default=None, 
+                        help='Override track ID manually')
+    
+    args = parser.parse_args()
+    
+    train(gene_index_arg=args.index, 
+          k_arg=args.k, 
+          tissue_arg=args.tissue,
+          track_idx_arg=args.manual_track_id)

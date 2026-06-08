@@ -1,0 +1,34 @@
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+.env
+
+# PyTorch & Models (防止误传几个G的模型)
+*.pt
+*.pth
+*.ckpt
+*.bin
+
+# Data (防止误传数据集)
+*.h5
+*.csv
+*.tsv
+*.bw
+/data/
+/dataset/
+dataset
+results
+
+# Logs & Tools
+.idea/
+.vscode/
+.ipynb_checkpoints/
+wandb/
+logs/
+results/
+# 替换掉原来的 rebuttal/
+rebuttal/logs_seed_test/
+rebuttal/results_rebuttal/
+rebuttal/logs/

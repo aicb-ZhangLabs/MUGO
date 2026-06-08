@@ -1,0 +1,11 @@
+README.md
+setup.py
+mugo/__init__.py
+mugo/core.py
+mugo/objectives.py
+mugo/utils.py
+mugo.egg-info/PKG-INFO
+mugo.egg-info/SOURCES.txt
+mugo.egg-info/dependency_links.txt
+mugo.egg-info/requires.txt
+mugo.egg-info/top_level.txt

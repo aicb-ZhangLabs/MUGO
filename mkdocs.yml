@@ -1,0 +1,22 @@
+site_name: MUGO Framework
+site_url: https://mugo-framework.netlify.app/
+repo_url: https://github.com/anonymous/mugo
+repo_name: MUGO-Bio/mugo
+edit_uri: ""  # 隐藏编辑按钮，防止暴露
+
+theme:
+  name: material
+  palette: 
+    primary: indigo
+    accent: light blue
+  features:
+    - navigation.tabs
+    - navigation.sections
+    - content.code.copy
+
+nav:
+  - Home: index.md
+  - Installation: installation.md
+  - Tutorials:
+      - 'Reproducing Paper Results': tutorials/repro.md
+  - 'Advanced Usage': advanced.md

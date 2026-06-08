@@ -1,0 +1,30 @@
+\begin{table}[t]
+\centering
+\scriptsize
+\setlength{\tabcolsep}{5pt}
+\renewcommand{\arraystretch}{1.1}
+\caption{\textbf{Multi-modal Benchmark.} Mean Absolute Gain ($\%$) on causal SNPs. \textbf{Bold} indicates best performance.}
+\label{tab:multimodal_benchmark}
+\resizebox{0.9\columnwidth}{!}{%
+\begin{tabular}{llcccc}
+\toprule
+\textbf{Modality} & \textbf{Tissue} & \textbf{MUGO} & \textbf{Sal.} & \textbf{CADD} & \textbf{FunSeq} \\
+\midrule
+\textbf{RNA-seq} & Blood & \textbf{27.4} & 22.0 & 3.1 & 1.6 \\
+ & Brain & \textbf{12.8} & 11.0 & 2.5 & 1.5 \\
+ & Liver & 18.1 & \textbf{21.4} & 2.3 & 1.5 \\
+ & Heart & \textbf{21.4} & 14.1 & 2.5 & 2.0 \\
+ & Musc. & \textbf{21.2} & 20.3 & 2.4 & 1.5 \\
+\midrule
+\textbf{ATAC} & Blood & 3.9 & \textbf{4.0} & 0.4 & 0.1 \\
+ & Brain & \textbf{1.7} & 1.6 & 0.3 & 0.1 \\
+ & Liver & \textbf{3.7} & 3.5 & 0.2 & 0.2 \\
+ & Heart & 2.5 & \textbf{2.5} & 0.2 & 0.1 \\
+ & Musc. & 4.3 & \textbf{4.5} & 0.3 & 0.2 \\
+\midrule
+\textbf{DNAse} & Blood & \textbf{29.8} & 29.1 & 3.2 & 1.1 \\
+ & Brain & \textbf{5.8} & 5.2 & 1.3 & 0.1 \\
+\midrule
+\bottomrule
+\end{tabular}}
+\end{table}
