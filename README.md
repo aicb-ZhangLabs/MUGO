@@ -1,49 +1,368 @@
 # MUGO: Multi-Head Genomic Optimization
 
-[![PyPI version](https://img.shields.io/pypi/v/mugo.svg)](https://pypi.org/project/mugo/)
-[![Documentation](https://img.shields.io/badge/docs-online-blue)](https://mugo-framework.netlify.app)
-[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+MUGO is a differentiable combinatorial optimization workflow for selecting
+sets of non-coding variants that jointly maximize regulatory signals predicted
+by sequence-to-function genomic models. The code in this repository was used
+for the KDD paper experiments with Borzoi and Enformer backbones, including
+RNA-seq, CAGE, ATAC, ChIP, and DNase objectives.
 
-**MUGO** is a differentiable combinatorial optimization framework designed for discovering causal variants in the non-coding genome. By leveraging **Gumbel-Softmax relaxation** and **Straight-Through Estimators (STE)**, MUGO enables end-to-end gradient-based optimization on discrete DNA sequences.
+This repository is intended as the public source-code artifact for paper
+reproduction. The experiment code lives in `src/` and the batch entry points
+live in `jobs/`. The small `mugo/` Python package is retained for packaging
+metadata only; it is not the main reproduction interface for the paper.
 
-## Key Features
+Repository: https://github.com/aicb-ZhangLabs/MUGO
 
-* 🧬 **Model-Agnostic**: Compatible with Borzoi, Enformer, HyenaDNA, and other PyTorch-based genomic models.
-* 🎯 **Multi-Modal Objectives**: Optimize for Gene Expression, Chromatin Accessibility (ATAC), or TF Binding.
-* 📉 **Variance Reduction**: Built-in Multi-Head Consensus strategy to filter stochastic noise.
-* 🚀 **Production Ready**: Easy-to-use Python API for high-performance computing.
+## Artifact Scope
 
-## Installation
+This artifact contains:
+
+- MUGO training scripts for Borzoi and Enformer objectives.
+- Baseline implementations for greedy ISM, random search, saliency, feature
+  ablation, CADD, and FunSeq2 comparisons.
+- Analysis scripts for gain, GTEx hit enrichment, conservation enrichment,
+  GWAS enrichment, multimodal benchmarking, ablations, and rebuttal analyses.
+- Slurm job scripts used for large-scale execution on the authors' cluster.
+
+This artifact does not include large controlled data files, genome FASTA files,
+model checkpoints, or generated result folders. Those paths are intentionally
+ignored by Git through `.gitignore`.
+
+## Repository Layout
+
+```text
+MUGO/
+  src/
+    train_model/                  Main MUGO optimization scripts
+    baseline_benchmark/           Baseline methods and summary tables
+    process_data/                 Data preprocessing helpers
+    interpretability/             Metrics, enrichment, and figure scripts
+    ablation_borzoi_K/            K ablation scripts
+    plot/                         Plotting utilities
+    supple_figures/               Supplementary figure scripts
+  jobs/                           Slurm array jobs for cluster reproduction
+  rebuttal/code_rebuttal/         Additional analyses from the rebuttal stage
+  docs/                           Legacy documentation sources
+  mugo/                           Minimal package shell, not the paper pipeline
+  setup.py                        Lightweight package metadata
+```
+
+## Hardware and Runtime
+
+The main Borzoi/Enformer runs are GPU workflows. The authors used NVIDIA GPUs
+through Slurm jobs; a single-gene smoke test can be run on any CUDA GPU with
+enough memory for Borzoi. Full reproduction over all genes and tissues should
+be treated as an HPC batch workload.
+
+Recommended environment:
+
+- Python 3.8 or newer.
+- PyTorch 2.0 or newer with CUDA support.
+- Linux or an HPC environment with Slurm for full-scale runs.
+- At least one CUDA GPU for model inference and optimization.
+
+Core Python dependencies used across the scripts:
 
 ```bash
-pip install mugo
+pip install torch pandas numpy scipy tqdm matplotlib seaborn pyfaidx pysam pyBigWig pyliftover
+pip install borzoi-pytorch enformer-pytorch
 ```
 
-## Quick Start
+Optional dependencies are needed only for specific auxiliary analyses:
+
+```bash
+pip install basenji2-pytorch kipoiseq adjustText openpyxl
+```
+
+The repository can also be installed in editable mode for package metadata:
+
+```bash
+pip install -e .
+```
+
+## Path Convention
+
+Most scripts in this snapshot use the original project root:
+
+```text
+/home/dongbos/Combine_optim_Borzoi_SNP
+```
+
+For the least invasive reproduction, clone or symlink the repository to that
+location on the machine where the jobs run:
+
+```bash
+mkdir -p /home/dongbos
+git clone https://github.com/aicb-ZhangLabs/MUGO.git /home/dongbos/Combine_optim_Borzoi_SNP
+cd /home/dongbos/Combine_optim_Borzoi_SNP
+```
+
+If that path is not available, replace the `BASE_DIR` constants in the scripts
+you plan to run with your local repository path. You can find all hard-coded
+root references with:
+
+```bash
+rg "/home/dongbos/Combine_optim_Borzoi_SNP"
+```
+
+## Data Preparation
+
+Create the following directory structure under the project root:
+
+```text
+dataset/
+  human_genome_hg38/
+    hg38.ml.fa
+  gencode.v41.annotation.gtf.gz
+  gene_3000_borzoi_gencode_v41_hg38.csv
+  gene_snps_hg38/
+    {GENE_NAME}_snps_hg38.csv
+  GTEx_Analysis_v8_eQTL/
+  GWAS_Catelog_disease/
+  PolyP_hg38/
+    hg38.phyloP100way.bw
+results/
+```
+
+The main gene metadata CSV is expected to contain at least:
+
+```text
+chr,pos,strand,gene_ID,gene_name
+```
+
+Each per-gene SNP CSV is expected to contain:
+
+```text
+POS_hg38,ALT
+```
+
+If available, include `REF` as well; the scripts will log `REF->ALT` pairs in
+the optimization output.
+
+Reference preprocessing helpers are in `src/process_data/`:
+
+- `extract_genes_tss_borzoi.py` prepares the hg38 gene/TSS metadata table.
+- `extract_vcf_liftoverto_hg38.py --gene_index <i>` extracts and lifts SNPs
+  for one gene.
+- `enformer_extract_haplotype_Huang.py --gene_index <i>` prepares Enformer
+  haplotype inputs.
+
+## Quick Smoke Test
+
+After installing dependencies and preparing a small subset of `dataset/`, run a
+single Borzoi RNA-seq optimization:
+
+```bash
+python src/train_model/MVP_multi_head.py --index 0 --k 10 --tissue blood
+```
+
+Expected output:
+
+```text
+results/blood_K10_borzoi_modeltrain_res/{GENE_NAME}_optim_log.csv
+```
+
+The CSV contains one row per optimization step, including loss, predicted gain,
+baseline signal, temperature, track index, and the ranked selected variants.
+
+Run the Borzoi CAGE objective similarly:
+
+```bash
+python src/train_model/MVP_multi_head_borzoi_CAGE.py --index 0 --k 10 --tissue blood
+```
+
+Expected output:
+
+```text
+results/blood_K10_borzoi_CAGE_modeltrain_res/{GENE_NAME}_borzoi_CAGE_optim_log.csv
+```
+
+## Main Optimization Scripts
+
+All main scripts share the same basic arguments:
+
+```text
+--index            Row index in dataset/gene_3000_borzoi_gencode_v41_hg38.csv
+--k                Number of variants/heads to select, default 10
+--tissue           Tissue name used to look up the target track
+--manual_track_id  Optional manual override for the model target track
+```
+
+Primary entry points:
+
+```bash
+python src/train_model/MVP_multi_head.py --index 0 --k 10 --tissue blood
+python src/train_model/MVP_multi_head_borzoi_CAGE.py --index 0 --k 10 --tissue blood
+python src/train_model/MVP_multi_head_enformer_CAGE.py --index 0 --k 10 --tissue blood
+python src/train_model/multi_head_borzoi_ATAC.py --index 0 --k 10 --tissue blood
+python src/train_model/multi_head_borzoi_CHIP.py --index 0 --k 10 --tissue blood
+python src/train_model/multi_head_borzoi_DNAse.py --index 0 --k 10 --tissue blood
+```
+
+The Borzoi scripts load model weights with:
+
 ```python
-import torch
-from mugo import MultiHeadSelector
-
-# Initialize the optimizer
-selector = MultiHeadSelector(num_snps=1000, snp_positions=positions, k=20)
-
-# Optimization loop
-for step in range(200):
-    input_seq, mask, _ = selector(ref_seq, alt_seq, tau=1.0)
-    # ... compute loss and backward ...
+Borzoi.from_pretrained("johahi/borzoi-replicate-0")
 ```
 
-## Documentation
-Comprehensive documentation, tutorials, and API references are available at: 👉 https://mugo-framework.netlify.app
+The first run may download model weights through the underlying model package.
 
-## Citations
-If you use MUGO in your research, please cite:
+## Full-Scale Cluster Runs
+
+The `jobs/` directory contains Slurm scripts used for array execution. Before
+submitting a job, edit the job header for your cluster partition, node names,
+conda environment, and tissue list.
+
+Examples:
+
+```bash
+sbatch jobs/MVP_multi_head_borzoi_H100.sh
+sbatch jobs/MVP_borzoi_CAGE_H100.sh
+sbatch jobs/MVP_borzoi_ATAC_H100.sh
+sbatch jobs/MVP_borzoi_CHIP_H100.sh
+sbatch jobs/MVP_borzoi_DNAse_H100.sh
+sbatch jobs/MVP_enformer_CAGE_H100.sh
+```
+
+The default Slurm arrays use gene indices from the metadata table. For a small
+reproduction, reduce the `#SBATCH --array` range to a handful of genes.
+
+## Baseline Reproduction
+
+Baseline scripts are in `src/baseline_benchmark/`.
+
+Run one-gene examples:
+
+```bash
+python src/baseline_benchmark/Greedy_ISM_topK_search.py --index 0 --tissue blood
+python src/baseline_benchmark/random_search.py --index 0 --tissue blood --k 10 --trials 1000
+python src/baseline_benchmark/saliency_map_gradient_based.py --index 0 --tissue blood --modality RNA
+python src/baseline_benchmark/feature_ablation.py --index 0 --tissue blood
+python src/baseline_benchmark/CADD_benchmark.py --index 0 --tissue blood
+python src/baseline_benchmark/Funseq2_benchmark.py --index 0 --tissue blood
+```
+
+Associated Slurm wrappers:
+
+```bash
+sbatch jobs/baseline_benchmark/Greedy_ISM_topK.sh
+sbatch jobs/baseline_benchmark/random_search.sh
+sbatch jobs/baseline_benchmark/saliency_map_gradient.sh
+sbatch jobs/baseline_benchmark/feature_ablation.sh
+sbatch jobs/baseline_benchmark/CADD.sh
+sbatch jobs/baseline_benchmark/Funseq.sh
+```
+
+Summarize baseline outputs:
+
+```bash
+python src/baseline_benchmark/generate_baseline_benchmark_table.py --tissue blood
+python src/baseline_benchmark/Benchmark_GTEx_hit_enrichment_othermethod.py --tissue blood --k 10
+python src/baseline_benchmark/compute_gain_matrix_saliency_CADD_Funseq.py --tissue blood --modality RNA
+```
+
+## Paper Tables, Figures, and Metrics
+
+The analysis scripts assume the corresponding raw optimization and baseline
+CSV files already exist under `results/`.
+
+Common entry points:
+
+```bash
+python src/interpretability/newversion_table2/benchmarking_on_geneset.py --tissue blood --modality RNA-seq --mode top100
+python src/interpretability/newversion_table2/get_new_table2.py
+python src/interpretability/fig3_table_tissuespecific_multimodal/cal_fig3_datamatrix.py --mode ATAC
+python src/interpretability/fig4_gwas/cal_gwas_disease_enrichment.py --tissue blood --mode best
+python src/interpretability/fig2_all.py
+python src/interpretability/fig5_all.py --tissue blood
+```
+
+K ablations:
+
+```bash
+python src/ablation_borzoi_K/generate_gain_eachK_borzoi.py
+python src/ablation_borzoi_K/generate_GTExhit_eachK_borzoi.py
+python src/ablation_borzoi_K/generate_gwas_enrichment_eachK_borzoi.py --tissue blood
+python src/ablation_borzoi_K/generate_polyp_eachK_borzoi.py
+python src/ablation_borzoi_K/generate_ablation_table_borzoi_K.py
+```
+
+Additional rebuttal analyses are grouped by topic:
+
+- `rebuttal/code_rebuttal/time_space_efficacy/`
+- `rebuttal/code_rebuttal/more_randomseed_borzoi/`
+- `rebuttal/code_rebuttal/sensitivity_analysis/`
+- `rebuttal/code_rebuttal/satuation_mutagenesis/`
+- `rebuttal/code_rebuttal/crispr_wetlab_validation/`
+- `rebuttal/code_rebuttal/add_backbone/`
+
+## Expected Reproduction Order
+
+For a reviewer who wants to reproduce the computational pipeline:
+
+1. Prepare the Python/CUDA environment.
+2. Clone the repository at the expected project path or update `BASE_DIR`.
+3. Prepare `dataset/` with hg38 FASTA, GENCODE v41 GTF, gene metadata, and
+   per-gene SNP CSV files.
+4. Run a one-gene smoke test with `src/train_model/MVP_multi_head.py`.
+5. Run the desired Slurm arrays in `jobs/` for all genes/tissues/modalities.
+6. Run baseline scripts from `src/baseline_benchmark/`.
+7. Run analysis scripts from `src/interpretability/` and
+   `src/ablation_borzoi_K/` to regenerate tables and figures.
+
+## Troubleshooting
+
+- `SNP file not found`: confirm that
+  `dataset/gene_snps_hg38/{GENE_NAME}_snps_hg38.csv` exists and that
+  `gene_name` matches the metadata CSV.
+- `Sequence length mismatch`: confirm that the hg38 FASTA uses chromosome names
+  matching the scripts, such as `chr1`, `chr2`, and that the TSS window lies
+  within the chromosome bounds.
+- CUDA memory errors: reduce the Slurm array concurrency, run one tissue at a
+  time, or use a GPU with more memory.
+- Missing CADD/FunSeq/GTEx/GWAS files: those external resources are needed only
+  for the corresponding baseline or enrichment analysis.
+- Wrong tissue track: pass `--manual_track_id` to override the built-in tissue
+  map for a specific model output track.
+
+## KDD Artifact Badge Metadata
+
+Suggested artifact form values after archiving a release with Zenodo:
+
+- Artifact contents: `Software`
+- Artifact name: `MUGO source code and reproduction scripts`
+- Repository URL: `https://github.com/aicb-ZhangLabs/MUGO`
+- DOI URL: use the Zenodo DOI minted from the GitHub release.
+- License: `MIT`
+
+For the camera-ready resource availability statement, include both the Zenodo
+DOI and the GitHub repository URL. Replace the DOI placeholder after Zenodo
+creates the release DOI.
+
+```latex
+\newcommand\kddavailabilityurl{https://doi.org/REPLACE_WITH_ZENODO_DOI}
+\ifdefempty{\kddavailabilityurl}{}{
+\begingroup\small\noindent\raggedright\textbf{Resource Availability:}\\
+The source code and reproduction scripts for this paper are publicly available
+at \url{\kddavailabilityurl} and
+\url{https://github.com/aicb-ZhangLabs/MUGO}.
+\endgroup
+}
+```
+
+## Citation
+
+```bibtex
 @misc{mugo2026,
-  author = {{SciML Team}},
-  title = {MUGO: Differentiable Combinatorial Optimization for Genomics},
+  author = {{MUGO authors}},
+  title = {MUGO: Multi-Head Genomic Optimization},
   year = {2026},
   publisher = {GitHub},
   journal = {GitHub repository},
-  howpublished = {\url{https://github.com/anonymous/mugo}},
-  note = {Accessed: 2026-01-10}
+  howpublished = {\url{https://github.com/aicb-ZhangLabs/MUGO}}
 }
+```
+
+## License
+
+This repository is released under the MIT License. See `LICENSE` for details.

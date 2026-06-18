@@ -1,7 +1,6 @@
 site_name: MUGO Framework
-site_url: https://mugo-framework.netlify.app/
-repo_url: https://github.com/anonymous/mugo
-repo_name: MUGO-Bio/mugo
+repo_url: https://github.com/aicb-ZhangLabs/MUGO
+repo_name: aicb-ZhangLabs/MUGO
 edit_uri: ""  # 隐藏编辑按钮，防止暴露
 
 theme:
